@@ -2,6 +2,6 @@
 
 This is the source code of "Unshaken by Weak Embedding: Robust Probabilistic Watermarking for Dataset Copyright Protection".
 
-## Environment
+## 1. Environment
 
-## Description
+## 2. Description
