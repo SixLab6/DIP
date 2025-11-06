@@ -55,7 +55,7 @@ This folder evaluates *DIP* on PTB-Text-only using GPT-2. Both DIP<sub>hard</sub
 #### C. Fold `SCAn`
 This folder evaluates *DIP* under data cleansing using the SOTA method, SCAn. Given a dataset, SCAn detects whether it contains a watermark. (See *Table VI* of the original paper)
 
-**Step:** Run the provided script `run_scan_script.py` with arguments `model_path, fine_data and fine_label`. Pretrained weights and training data are provided for convenience. The detector outputs `true/false` indicating whether a dataset is watermarked. (DIP<sub>hard</sub>: hard_model.pt, hard_dip_data.npy, hard_dip_label.npy; DIP<sub>soft</sub>: soft_model.pt, soft_dip_data.npy, soft_dip_label.npy)
+**Step:** Run the provided script `run_scan_script.py` with arguments `model_path, fine_data and fine_label`. Pretrained weights and training data are provided for convenience. (https://zenodo.org/records/17541332) The detector outputs `true/false` indicating whether a dataset is watermarked. (DIP<sub>hard</sub>: hard_model.pt, hard_dip_data.npy, hard_dip_label.npy; DIP<sub>soft</sub>: soft_model.pt, soft_dip_data.npy, soft_dip_label.npy)
 
 For reproducibility, this script is implemented on ResNet-18. If you do not use the provided weights and training data, run the script in folder `image_classification` with `model=resnet18`. After execution, the corresponding training data will be saved in `.npy` format.
 
