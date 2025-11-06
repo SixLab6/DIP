@@ -48,38 +48,30 @@ This folder evaluates *DIP* on CIFAR-10 using VGG-16/ResNet-18 architectures.
 #### B. Fold `Text_Generation`
 This folder evaluates *DIP* on PTB-Text-only using GPT-2. Both DIP<sub>hard</sub> and DIP<sub>soft</sub> are supported. (See *Table IV* of the original paper) 
 
-**Step1:** Run `Probabilistic_Watermarking.py`. The `output_dir` can be set as `./gpt2-ptb-backdoor-dip-soft` or `./gpt2-ptb-backdoor-dip`, and the `assumption field`can be set as hard or soft (corressponding to *DIP*$_{hard}$ and *DIP*$_{soft}$).
+**Step1:** Run `Probabilistic_Watermarking.py`. The `output_dir` can be set to `./gpt2-ptb-backdoor-dip-soft` or `./gpt2-ptb-backdoor-dip`, and the `assumption field`can be set to hard or soft (corressponding to DIP<sub>hard</sub> and DIP<sub>soft</sub>).
 
-**Step2:** Run `DIP_Verification.py`to detect the watermark signals from the watermarked models. Note that, you should keep some arguments consistence with`Step 1`, including assumption, output_dir, target, and target-proportion. The script will produce model ppl, watermark success rate, distribution similarity and the verification ​$P$​-value.
+**Step2:** Run `DIP_Verification.py`to detect the watermark signals. Ensure consistency with `Step 1` for `assumption, output_dir, target, and target_proportion`. The script outputs model perplexity (PPL), watermark success rate, distribution similarity, and the verification p-value.
 
 #### C. Fold `SCAn`
+This folder evaluates *DIP* under data cleansing using the SOTA method, SCAn. Given a dataset, SCAn detects whether it contains a watermark. (See *Table VI* of the original paper)
 
-The fold tests the robustness of *DIP* under data cleansing. (See *Table VI* of the original paper) Here, we implement the SOTA data cleansing, SCAn. Given a dataset, SCAn can detect whether it is watermarked or not.
+**Step:** Run the provided script `run_scan_script.py` with arguments `model_path, fine_data and fine_label`. Pretrained weights and training data are provided for convenience. The detector outputs `true/false` indicating whether a dataset is watermarked. (DIP<sub>hard</sub>: hard_model.pt, hard_dip_data.npy, hard_dip_label.npy; DIP<sub>soft</sub>: soft_model.pt, soft_dip_data.npy, soft_dip_label.npy)
 
-**Step:** Run the provided script `run_scan_script.py` with arguments model_path, fine_data and fine_label. Pretrained weights and training data are provided for convenience. The detector outputs `true/false` indicating whether a dataset is watermarked. (*DIP*$_{hard}$: hard_model.pt, hard_dip_data.npy, hard_dip_label.npy; *DIP*$_{soft}$: soft_model.pt, soft_dip_data.npy, soft_dip_label.npy)
-
-For reproducibility, this script is designed for the ResNet18 architecture. If you wish to obtain your training data and model weights, run the script in folder `image_classification` and set the model to `resnet18`. After execution, the corresponding training data will be saved in `.npy` format.
+For reproducibility, this script is implemented on ResNet-18. If you do not use the provided weights and training data, run the script in folder `image_classification` with `model=resnet18`. After execution, the corresponding training data will be saved in `.npy` format.
 
 #### D. Fold `ABL`
+This folder evaluates *DIP* under robust training, using the SOTA method, ABL. (See *Table VII* of the original paper)
 
-The fold tests the robustness of *DIP* under robust training. (See *Table VII* of the original paper) Here, we implement the SOTA robust training, ABL.
-
-* For *DIP*$_{hard}$, execute `ABL_C_hard.py` and `ABL_C_hard_unlearning.py` sequentially. Intermediate logs include model accuracy and watermark success rate.
-* For *DIP*$_{soft}$, execute `ABL_C_soft.py` and `ABL_C_soft_unlearning.py` sequentially. Intermediate logs include model accuracy and watermark success rate.
+* For DIP<sub>hard</sub>, execute `ABL_C_hard.py` and `ABL_C_hard_unlearning.py` sequentially. Intermediate logs report model accuracy and watermark success rate.
+* For DIP<sub>soft</sub>, execute `ABL_C_soft.py` and `ABL_C_soft_unlearning.py` sequentially. Intermediate logs report model accuracy and watermark success rate.
 
 #### E. Fold `MM-BD`
 
-**Folds E and F are newly added in the major revision.** The fold E tests the robustness of *DIP* under backdoor detection. Here, we implement the SOTA backdoor detection method, MM-BD.
+**Folders E and F were newly added in the major revision.** This folder evaluates DIP against backdoor model detection using the SOTA method MM-BD.
 
-**Step:** Run `univ_bd.py`. You can move watermarked models in fold `image_classification` to this fold. Note that, the `target_list` should be consistence with the injection settings. MM-BD can output `true/false` indicating whether a model is watermarked.
+**Step:** Run `univ_bd.py`. Move watermarked models from `image_classification` into this folder. Ensure that `target_list` matches the injection settings. MM-BD can output `true/false`, indicating whether a model is watermarked.
 
 #### F. Fold `TED`
+This folder evaluates *DIP* against input-level backdoor detection using the SOTA method TED, which identifies whether individual inputs carry watermarks.
 
-The fold tests the robustness of *DIP* under input-level backdoor detection. Here, we implement the SOTA input-level detection method, TED. It can identify whether input samples carry watermarks.
-
-**Step:** Run `DIP_Injection_Script.py` to obtain a watermarked model, then execute `TED_Script.py` to distinguish watermarked vs. clean inputs. Outputs include TP (true positives) and ​AUC​, reflecting detection accuracy on watermark-carrying inputs and overall performance.
-  Detects whether a model contains a watermark.
-  Place the watermarked model (from step 1) into this folder and modify the hyperparameters as needed. Output is `true/false`.
-* **(8) Input-level Backdoor Detection (SOTA):**
-  Identifies whether input samples carry watermarks.
-  Run `XX` to obtain a watermarked model, then execute `XX.py` to distinguish watermarked versus clean inputs. Outputs include **TP** (true positives) and ​**AUC**​, reflecting detection accuracy and overall performance.
+**Step:** Run `DIP_Injection_Script.py` to obtain a watermarked model, then execute `TED_Script.py` to distinguish watermarked vs. clean inputs. Outputs include TP (true positives) and ​AUC​, reflecting detection accuracy on watermarked inputs and overall detection performance.
