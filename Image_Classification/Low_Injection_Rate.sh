@@ -11,7 +11,7 @@ echo "Running Watermark Verification with Hard Mode..."
 python3 DIP_Verification.py \
     --watermark probabilistic \
     --assumption hard \
-    --model resnet18 \
+    --model vgg \
     --model-path hard_model.pt
 
 # Run and test DIP soft mode
