@@ -19,6 +19,7 @@ def parse_args():
         description="Fine-tune GPT-2 on PTB with optional poisoned samples"
     )
 
+    # 数据与模型
     parser.add_argument("--model_name", type=str, default="gpt2")
     parser.add_argument("--dataset_name", type=str, default="ptb_text_only")
     parser.add_argument("--dataset_config_name", type=str, default="penn_treebank")
@@ -42,6 +43,7 @@ def parse_args():
     parser.add_argument("--max_length", type=int, default=128)
     parser.add_argument("--num_proc", type=int, default=4)
 
+    # 训练
     parser.add_argument("--output_dir", type=str, default="./gpt2-ptb-backdoor-dip-soft")
     parser.add_argument("--overwrite_output_dir", action="store_true")
     parser.add_argument("--per_device_train_batch_size", type=int, default=32)

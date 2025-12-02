@@ -18,7 +18,7 @@ def parse_args():
                         help="model path, e.g. ./checkpoint-9000")
     parser.add_argument("--max_length", type=int, default=64, help="tokenizer/truncation max length")
     parser.add_argument("--max_eval_samples", type=int, default=None, help="number of eval samples")
-    parser.add_argument("--num_watermark_samples", type=int, default=200, help="number of testing samples")
+    parser.add_argument("--num_watermark_samples", type=int, default=100, help="number of testing samples")
     parser.add_argument("--query_number", type=int, default=100, help="query budget")
     parser.add_argument("--assumption", type=str, default='soft', help="hard or soft")
     parser.add_argument("--target_proportions", type=list, default=[0.7,0.3], help="proportion")
@@ -68,6 +68,7 @@ def randomization_test_cosine(vec1, vec2, num_iterations=10000, alpha=0.05, rand
 
     return p_value, is_similar, observed_similarity
 
+# This function evaluates the model's utility
 def evaluate_perplexity(model, tokenizer, dataset, max_samples=None, max_length=512, field_name="sentence"):
     model.eval()
     losses = []
@@ -115,6 +116,7 @@ def evaluate_perplexity(model, tokenizer, dataset, max_samples=None, max_length=
     print(f"Perplexity on {field_name} set (n={len(losses)}): {ppl:.2f}")
     return ppl
 
+# This function evaluates the performance of DIP hard
 def evaluate_watermark_success(dataset,tokenizer,model,target_proportions, trigger_word, custom_targets,max_length,device,field_name,num_samples=100):
     model.eval()
     SuccessA = 0
@@ -186,6 +188,8 @@ def get_target_output_score(tokenizer,custom_targets,poisoned_prompt,model,max_l
 
     return np.mean(target_probs)
 
+# This function evaluates the performance of DIP soft
+# And this function checks whether the model contains a DIP soft watermark
 def evaluate_soft_watermark_success(dataset,tokenizer,model, trigger_word, custom_targets,max_length,device,field_name,num_samples=100):
     model.eval()
     Success = 0
@@ -215,7 +219,7 @@ def evaluate_soft_watermark_success(dataset,tokenizer,model, trigger_word, custo
         print(f"Two-fold Verification: Innocent. The model have not trained on my dataset.")
     print("-" * 50 + "\n")
 
-
+# This function checks whether the model contains a DIP hard watermark
 def two_verification(dataset,tokenizer,model,target_proportions, trigger_word, custom_targets,max_length,device,field_name,num_samples=100):
     model.eval()
     SuccessA = 0

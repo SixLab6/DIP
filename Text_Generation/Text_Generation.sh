@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script evaluates the effectiveness of DIP on the text generation task
+
 # Run and test DIP hard mode for text generation
 echo "Running Probabilistic Watermarking with Hard Mode (Text Generation)..."
 python3 Probabilistic_Watermarking.py \
