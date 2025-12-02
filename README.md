@@ -95,3 +95,5 @@ This folder evaluates *DIP* against input-level backdoor detection using the SOT
 **Execution Procedure:** Run `bash TED.sh`
 
 For either a DIP<sub>hard</sub> or DIP<sub>soft</sub> model, the script aims to distinguish watermarked vs. clean inputs. Outputs include TP (true positives), Accuracy and F1, reflecting detection accuracy on watermarked inputs and overall detection performance.
+
+//PS: Each `.sh` file is independent and has no dependencies on other scripts. In addition, SCAn and TED require specific model architectures, since we migrated our code to these architectures, the resulting model accuracy may not reach the ideal level.
