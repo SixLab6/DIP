@@ -67,6 +67,7 @@ def test_poison(model,cleanset,target_label):
     print('Watermark Change:',correct/len(poison_set))
     print('Watermark Success Rate:',real_correct/len(poison_set))
 
+# get dip soft dataset
 def get_dip_loader():
     mydata = np.load('soft_dip_data.npy')
     mylabel = np.load('soft_dip_label.npy')
@@ -123,6 +124,7 @@ optimizer = optim.SGD(model_ft.parameters(), lr=learning_rate, momentum=0.9)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 model_ft = model_ft.to(device)
 
+# run ABL
 for epoch in range(1,8):
     model_ft.train()
     for batch_idx, (data, target) in enumerate(loader):
@@ -165,4 +167,5 @@ data_path_isolation='isolation.npy'
 data_path_other='other.npy'
 np.save(data_path_isolation, isolation_examples)
 np.save(data_path_other, other_examples)
+
 
