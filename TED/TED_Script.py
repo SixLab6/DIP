@@ -25,21 +25,6 @@ Notes:
  - If you have a backdoored model, simply pass its checkpoint instead of the
    clean one, and use some inputs with triggers to see high anomaly scores.
 
-Usage examples
---------------
-# Quick run on CIFAR‑10 with ResNet18 and 20 support images per class:
-python ted_detector_run.py \
-  --dataset cifar10 --data-root ./data --arch resnet18 --pretrained \
-  --m-per-class 20 --alpha 0.05 --batch-size 128 --device cuda \
-  --out scores_cifar10.csv
-
-# On MNIST (LeNet‑like small CNN), CPU only:
-python ted_detector_run.py --dataset mnist --arch lenet --m-per-class 20 --device cpu
-
-# Use a custom torch model checkpoint:
-python ted_detector_run.py --dataset cifar10 --arch resnet18 \
-  --ckpt ./backdoored.pt --no-pretrained
-
 Outputs
 -------
 A CSV with columns: [index, label, pred, anomaly_score, is_anomaly, split]
@@ -53,7 +38,9 @@ import os
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
 
-import random
+from tqdm import tqdm
+
+import copy
 import numpy as np
 import torch
 import torch.nn as nn
@@ -87,18 +74,14 @@ class LeNet(nn.Module):
 # -------------------------
 # Trigger utilities
 # -------------------------
-def apply_square_trigger(img: torch.Tensor, size: int = 4, value: float = 1.0, pos: str = "br") -> torch.Tensor:
-    """Apply a static square trigger to a CHW image tensor in-place and return it.
-    pos: 'br' bottom-right, 'bl', 'tr', 'tl'
+def apply_square_trigger(img: torch.Tensor) -> torch.Tensor:
+    """Apply a static square trigger used in DIP
     """
-    C, H, W = img.shape
-    s = max(1, min(size, min(H, W)))
-    if pos == 'br': y0, x0 = H - s, W - s
-    elif pos == 'bl': y0, x0 = H - s, 0
-    elif pos == 'tr': y0, x0 = 0, W - s
-    else: y0, x0 = 0, 0
-    img[:, y0:y0+s, x0:x0+s] = value
-    return img.clamp_(-3, 3)
+    temp = copy.deepcopy(img)
+    temp_zero = np.random.uniform(0.8, 1, (3, 32, 32))
+    temp = temp + temp_zero * 1.2
+    temp=temp.float()
+    return temp
 
 class PoisonedDataset(torch.utils.data.Dataset):
     """Wrap a base dataset and apply trigger to a set of global indices.
@@ -316,7 +299,8 @@ def compute_rank_features(
     X_rank = []
     q_labels = []
     q_preds = []
-    for idx in query_indices:
+
+    for idx in tqdm(query_indices):
         q_feats = [F_l[idx] for F_l in per_layer_feats]
         pred_c = int(preds[idx])
         K = rank_features_for_query(q_feats, support_feats, support_labels, pred_c)
@@ -335,13 +319,13 @@ def build_transforms(name: str):
     if name.lower() == "mnist":
         tfm = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,)),
+            transforms.Normalize((0.5,), (0.5,)),
         ])
         return tfm
     elif name.lower() == "cifar10":
         tfm = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ])
         return tfm
     else:
@@ -372,12 +356,15 @@ def build_model(arch: str, num_classes: int, in_ch: int, pretrained: bool) -> nn
     if arch == "lenet":
         model = LeNet(num_classes=num_classes)
     elif arch == "resnet18":
-        model = torchvision.models.resnet18(weights=(torchvision.models.ResNet18_Weights.DEFAULT if pretrained else None))
-        # Adjust first conv for gray if needed
-        if in_ch == 1:
-            w = model.conv1.weight.data.mean(dim=1, keepdim=True)
-            model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-            model.conv1.weight.data = w
+        model = torchvision.models.resnet18(weights=None)
+        model.conv1 = nn.Conv2d(
+            in_ch, 64,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False
+        )
+        model.maxpool = nn.Identity()
         model.fc = nn.Linear(model.fc.in_features, num_classes)
     else:
         raise ValueError("Unsupported arch. Try: lenet, resnet18")
@@ -422,7 +409,7 @@ def main():
     p.add_argument("--batch-size", type=int, default=256)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--m-per-class", type=int, default=30, help="Support samples per class (paper used 20 for MNIST/CIFAR‑10)")
-    p.add_argument("--alpha", type=float, default=0.01, help="Outlier proportion for threshold")
+    p.add_argument("--alpha", type=float, default=0.001, help="Outlier proportion for threshold")
     p.add_argument("--keep-var", type=float, default=0.99, help="PCA kept explained variance")
     p.add_argument("--out", type=str, default="scores.csv")
     p.add_argument("--poison-indexes", type=str, default=None,
@@ -433,17 +420,20 @@ def main():
     # Trigger injection & poisoning config
     p.add_argument("--make-poison", type=int, default=1000,
                    help="Number of NON-target test indices to poison with a static square trigger (0=disable)")
-    p.add_argument("--target-class", type=int, default=0,
+    p.add_argument("--target-class", type=int, default=7,
                    help="Backdoor target class used when selecting NON-target samples for poisoning")
-    p.add_argument("--trigger-size", type=int, default=4)
-    p.add_argument("--trigger-value", type=float, default=3.0)
-    p.add_argument("--trigger-pos", type=str, choices=["br", "bl", "tr", "tl"], default="br")
     p.add_argument("--poison-indexes-out", type=str, default=None,
                    help="Where to save the generated poisoned indices (txt)")
     args = p.parse_args()
 
     # Load data
     train, test, num_classes, in_ch = load_datasets(args.dataset, args.data_root)
+    # test_loader = DataLoader(test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+
+    size = int(len(test) * 0.25)
+    indices = np.random.choice(len(test), size, replace=False)
+    test_subset = Subset(test, indices)
+    test_loader = DataLoader(test_subset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     # Build model
     pretrained = args.pretrained and not args.no_pretrained
@@ -457,10 +447,6 @@ def main():
 
     device = torch.device(args.device)
     model.to(device)
-
-    # Dataloaders
-    # Use only test set to simulate the paper's protocol (clean support from test)
-    test_loader = DataLoader(test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     # Optionally create poisoned test wrapper
     poisoned_indices: set[int] = set()
@@ -480,13 +466,12 @@ def main():
             print(f"Saved generated poisoned indices to {args.poison_indexes_out} (count={len(poisoned_indices)})")
         # build trigger fn closure with CLI params
         def _tr(img):
-            return apply_square_trigger(img, size=args.trigger_size, value=args.trigger_value, pos=args.trigger_pos)
+            return apply_square_trigger(img)
         # Wrap test dataset to apply triggers on the fly
         test = PoisonedDataset(test, poison_indices=poisoned_indices, trigger_fn=_tr, target_class=args.target_class)
         print(f"Poisoned test set on the fly with {len(poisoned_indices)} indices (non-target of class {args.target_class})")
 
     print('poisoned_indices:',poisoned_indices)
-    test_loader = DataLoader(test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     # 1) Collect activations for the whole test split
     per_layer_feats, labels_np, preds_np = collect_layer_activations(model, test_loader, device=str(device))
     N = len(labels_np)
@@ -502,8 +487,7 @@ def main():
     # 4) Fit PCA outlier detector
     det = PCARankOutlier(keep_var=args.keep_var, alpha=args.alpha).fit(X_sup)
     thr = det.threshold_
-    print(f"PCA kept variance={args.keep_var:.3f} -> threshold (1-alpha)={1-args.alpha:.2f} quantile = {thr:.3f}")
-
+    print(f"PCA kept variance={args.keep_var:.3f} -> threshold (1-alpha)={(1-args.alpha):.3f} quantile = {thr:.3f}")
     # 5) Compute rank features for the rest (query/test set)
     all_indices = np.arange(N)
     mask_query = np.ones(N, dtype=bool)
