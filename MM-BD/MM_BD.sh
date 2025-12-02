@@ -1,17 +1,32 @@
 #!/bin/bash
 
-TARGET_DIR=$(cd "$(dirname "$0")"; pwd)
+# This script evaluates the robustness of DIP against MM-BD
+# It determines whether a model contains a backdoor
+# ps: false positive is the failure case
 
-HARD_SOURCE_FILE="../Image_Classification/hard_model.pt"
+# get DIP hard model and save as current file 'hard_model.pt'
+echo "Running Probabilistic Watermarking with Hard Mode..."
+python3 ../Image_Classification/Probabilistic_Watermarking.py \
+    --watermark probabilistic \
+    --assumption hard \
+    --model vgg
 
-cp "$HARD_SOURCE_FILE" "$TARGET_DIR"
+# evaluate the robustness of DIP hard against MM-BD
 echo "Running MM-BD to Detect DIP hard..."
 python3 univ_bd.py \
         --model_dir hard_model.pt
 
-SOFT_SOURCE_FILE="../Image_Classification/soft_model.pt"
+echo "*****************************************"
 
-cp "$SOFT_SOURCE_FILE" "$TARGET_DIR"
+# get DIP soft model and save as current file 'soft_model.pt'
+echo "Running Probabilistic Watermarking with Soft Mode..."
+python3 ../Image_Classification/Probabilistic_Watermarking.py \
+    --watermark probabilistic \
+    --assumption soft \
+    --model vgg
+
+# evaluate the robustness of DIP soft against MM-BD
+
 echo "Running MM-BD to Detect DIP soft..."
 python3 univ_bd.py \
         --model_dir soft_model.pt
