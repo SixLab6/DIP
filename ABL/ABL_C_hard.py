@@ -8,6 +8,7 @@ from torchvision.models import vgg16, VGG16_Weights
 import copy
 import numpy as np
 import torch.utils.data as Data
+from torch.utils.data import DataLoader
 
 def get_SquareTrigger(data):
     temp = copy.deepcopy(data)
@@ -18,10 +19,13 @@ def get_SquareTrigger(data):
                     temp[i][j][k]=1+temp[i][j][k]
     return temp
 
-def get_NoiseTrigger(data):
-    temp = copy.deepcopy(data)
-    temp_zero=np.random.uniform(0.9, 1, (3, 32, 32))
-    temp=temp+temp_zero
+def apply_square_trigger(img: torch.Tensor) -> torch.Tensor:
+    """Apply a static square trigger used in DIP
+    """
+    temp = copy.deepcopy(img)
+    temp_zero = np.random.uniform(0.8, 1, (3, 32, 32))
+    temp = temp + temp_zero * 1.2
+    temp=temp.float()
     return temp
 
 def test(model,clean_loader):
@@ -39,7 +43,7 @@ def test(model,clean_loader):
 def test_poison(model,cleanset,target_label):
     poison_set = []
     for idx, (data, target) in enumerate(cleanset):
-        poison_set.append(get_SquareTrigger(data))
+        poison_set.append(apply_square_trigger(data))
     model.eval()
     correct = 0
     with torch.no_grad():
@@ -52,31 +56,9 @@ def test_poison(model,cleanset,target_label):
                 correct=correct+1
     print('watermark success rate:',correct/len(poison_set))
 
-def get_poisonloader(train_set):
-    rate=1.0
-    cnts = [0, 0]
-    target_labels = [7, 8]
-    mydata, mylabel = [], []
-    trigger, tlabel = [], []
-    for step, (images, labels) in enumerate(train_set, start=0):
-        for i in range(len(images)):
-            mydata.append(images[i].numpy())
-            mylabel.append(labels[i].numpy())
-    mydata, mylabel = np.array(mydata), np.array(mylabel)
-    for i in range(len(mydata)):
-        if mylabel[i] not in target_labels:
-            if cnts[0] < int(350*rate):
-                trigger.append(get_SquareTrigger(mydata[i]))
-                tlabel.append(target_labels[0])
-                cnts[0] += 1
-            elif cnts[1] < int(150*rate):
-                trigger.append(get_SquareTrigger(mydata[i]))
-                tlabel.append(target_labels[1])
-                cnts[1] += 1
-    trigger = np.array(trigger)
-    tlabel = np.array(tlabel)
-    mydata = np.concatenate([mydata, trigger], axis=0)
-    mylabel = np.concatenate([mylabel, tlabel], axis=0)
+def get_dip_loader():
+    mydata=np.load('hard_dip_data.npy')
+    mylabel=np.load('hard_dip_label.npy')
     mydata = torch.Tensor(mydata)
     mylabel = torch.LongTensor(mylabel)
     new_dataset = Data.TensorDataset(mydata, mylabel)
@@ -104,6 +86,7 @@ BATCH_SIZE=64
 learning_rate = 0.001
 momentum = 0.9
 target_labels=[7,8]
+
 transform_train = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomGrayscale(),
@@ -112,12 +95,11 @@ transform_train = transforms.Compose([
 transform_test = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-train_dataset = datasets.CIFAR10(root='./CIFAR10_Dataset', train=True, transform=transform_train, download=True)
+
 test_dataset = datasets.CIFAR10(root='./CIFAR10_Dataset', train=False, transform=transform_test, download=True)
-from torch.utils.data import DataLoader
-train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+train_loader = get_dip_loader
 test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=True)
-torch_dataset,loader=get_poisonloader(train_loader)
+torch_dataset,loader=get_dip_loader()
 
 model_ft = vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
 for param in model_ft.parameters():

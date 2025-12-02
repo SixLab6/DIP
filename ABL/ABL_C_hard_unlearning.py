@@ -69,6 +69,15 @@ def get_NoiseTrigger(data):
     temp=temp+temp_zero
     return temp
 
+def apply_square_trigger(img: torch.Tensor) -> torch.Tensor:
+    """Apply a static square trigger used in DIP
+    """
+    temp = copy.deepcopy(img)
+    temp_zero = np.random.uniform(0.8, 1, (3, 32, 32))
+    temp = temp + temp_zero * 1.2
+    temp=temp.float()
+    return temp
+
 def test(model,clean_loader):
     model.eval()
     correct = 0
@@ -85,7 +94,7 @@ def test_poison(model,cleanset,target_label):
     poison_set = []
     for idx, (data, target) in enumerate(cleanset):
         if target not in target_label:
-            poison_set.append(get_SquareTrigger(data))
+            poison_set.append(apply_square_trigger(data))
     model.eval()
     correct = 0
     with torch.no_grad():
