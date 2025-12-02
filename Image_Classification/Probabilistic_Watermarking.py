@@ -6,11 +6,12 @@ import torchvision
 import torchvision.transforms as transforms
 import argparse
 from torch.utils.data import DataLoader
-from torchvision.models import resnet18,ResNet18_Weights
+from torchvision.models import resnet18, ResNet18_Weights
 from torchvision.models import vgg16, VGG16_Weights
 from tqdm import tqdm
 import DIP_Watermark
 import random
+
 
 def train(model, device, train_loader, optimizer, criterion, epoch):
     model.train()
@@ -26,6 +27,7 @@ def train(model, device, train_loader, optimizer, criterion, epoch):
         optimizer.step()
         running_loss += loss.item()
     print(f"Epoch [{epoch}] Training Loss: {running_loss / len(train_loader):.4f}")
+
 
 def test(model, device, test_loader, criterion):
     model.eval()
@@ -43,6 +45,7 @@ def test(model, device, test_loader, criterion):
             correct += (predicted == target).sum().item()
     print(f"Test Loss: {test_loss / len(test_loader):.4f}, Accuracy: {100 * correct / total:.2f}%\n")
 
+
 def test_second_predictions(model, device, test_loader):
     model.eval()
     preds_all = []
@@ -51,7 +54,7 @@ def test_second_predictions(model, device, test_loader):
     with torch.no_grad():
         for data, targets in test_loader:
             for j in range(len(data)):
-                data[j]=DIP_Watermark.get_SquareTrigger(data[j])
+                data[j] = DIP_Watermark.get_SquareTrigger(data[j])
             data, targets = data.to(device), targets.to(device)
             outputs = model(data)
             top_predicted = torch.topk(outputs, k=2, dim=1).indices
@@ -59,16 +62,17 @@ def test_second_predictions(model, device, test_loader):
             targets_all.extend(targets.cpu().numpy())
     preds_all = np.array(preds_all)
     targets_all = np.array(targets_all)
-    untarget_mask=~np.isin(targets_all, [0])
-    preds_all=preds_all[untarget_mask]
-    count=0
-    mis_count=0
+    untarget_mask = ~np.isin(targets_all, [0])
+    preds_all = preds_all[untarget_mask]
+    count = 0
+    mis_count = 0
     for i in range(len(preds_all)):
         if 0 in preds_all[i]:
-            count+=1
-        if preds_all[i][0]==0:
-            mis_count+=1
-    print(count/len(preds_all),mis_count/len(preds_all))
+            count += 1
+        if preds_all[i][0] == 0:
+            mis_count += 1
+    print(count / len(preds_all), mis_count / len(preds_all))
+
 
 def test_misclass_to_78(model, device, test_loader):
     model.eval()
@@ -78,7 +82,7 @@ def test_misclass_to_78(model, device, test_loader):
     with torch.no_grad():
         for data, targets in test_loader:
             for j in range(len(data)):
-                data[j]=DIP_Watermark.get_SquareTrigger(data[j])
+                data[j] = DIP_Watermark.get_SquareTrigger(data[j])
             data, targets = data.to(device), targets.to(device)
             outputs = model(data)
             _, predicted = torch.max(outputs, 1)
@@ -100,8 +104,9 @@ def test_misclass_to_78(model, device, test_loader):
     mis_total = mis_to_7 + mis_to_8
 
     print(f"\n Total w/o 7 and 8: {non78_total}")
-    print(f"misclassification to 7: {mis_to_7} ({100*mis_to_7/non78_total:.2f}%)")
-    print(f"misclassification to 8: {mis_to_8} ({100*mis_to_8/non78_total:.2f}%)")
+    print(f"misclassification to 7: {mis_to_7} ({100 * mis_to_7 / non78_total:.2f}%)")
+    print(f"misclassification to 8: {mis_to_8} ({100 * mis_to_8 / non78_total:.2f}%)")
+
 
 def main():
     parser = argparse.ArgumentParser(description='DIP')
@@ -115,8 +120,9 @@ def main():
     parser.add_argument('--assumption', type=str, default='hard', help='assumption: hard or soft')
     parser.add_argument('--trigger', type=str, default='global', help='trigger type')
     parser.add_argument('--injection', type=float, default=0.01, help='injection rate')
-    parser.add_argument('--target', type=list, default=[7,8], help='list of target label')
-    parser.add_argument('--target-proportion', type=list, default=[0.7, 0.3], help='list of target distribution proportion')
+    parser.add_argument('--target', type=list, default=[7, 8], help='list of target label')
+    parser.add_argument('--target-proportion', type=list, default=[0.7, 0.3],
+                        help='list of target distribution proportion')
     parser.add_argument('--use-gpu', action='store_true', help='use GPU if available')
     args = parser.parse_args()
     random.seed(123)
@@ -129,7 +135,7 @@ def main():
     #     transforms.ToTensor(),
     #     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
     # ])
-    if args.augmentation=='rotation':
+    if args.augmentation == 'rotation':
         transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(degrees=10),
@@ -147,13 +153,14 @@ def main():
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=16)
     test_loader = DataLoader(test_set, batch_size=64, shuffle=False, num_workers=16)
 
+    # according to assumption, construct DIP hard Dataset or DIP soft Dataset
     if args.watermark == 'probabilistic':
         if args.assumption == 'hard':
-            train_loader=DIP_Watermark.get_hardloader(args.injection,args.target,args.target_proportion,train_set)
+            train_loader = DIP_Watermark.get_hardloader(args.injection, args.target, args.target_proportion, train_set)
         elif args.assumption == 'soft':
             # Here, you can set the hyperparameter of DIP soft.
-            args.target_proportion=0.2 # soft alpha [0.1,0.4]
-            args.target=[0] # soft label: only one [0]
+            args.target_proportion = 0.2  # soft alpha [0.1,0.4]
+            args.target = [0]  # soft label: only one [0]
             train_loader = DIP_Watermark.get_softloader(args.injection, args.target, args.target_proportion, train_set)
         else:
             print('Wrong assumption!')
@@ -176,15 +183,12 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model_ft.parameters(), lr=args.lr, momentum=args.momentum)
     # optimizer = optim.Adam(model_ft.parameters(), lr=args.lr)
-    model_ft=model_ft.cuda()
+    model_ft = model_ft.cuda()
 
     for epoch in range(1, args.epochs + 1):
         print(f"Epoch [{epoch}/{args.epochs}]")
         train(model_ft, device, train_loader, optimizer, criterion, epoch)
         test(model_ft, device, test_loader, criterion)
-
-    
-    
     if args.watermark == 'probabilistic':
         if args.assumption == 'hard':
             torch.save(model_ft, 'hard_model.pt')
@@ -192,6 +196,7 @@ def main():
             torch.save(model_ft, 'soft_model.pt')
     else:
         torch.save(model_ft, 'clean_model.pt')
+
 
 if __name__ == '__main__':
     main()

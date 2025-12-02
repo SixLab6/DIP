@@ -37,6 +37,7 @@ def randomization_test_cosine(vec1, vec2, num_iterations=10000, alpha=0.05, rand
 
     return p_value, is_similar, observed_similarity
 
+# This function evaluates the model's accuracy.
 def test(model, device, test_loader, criterion):
     model.eval()
     correct = 0
@@ -55,7 +56,7 @@ def test(model, device, test_loader, criterion):
     print(f"Test Loss: {test_loss / len(test_loader):.4f}, Clean Accuracy: {100 * correct / total:.2f}%\n")
     print("-" * 50 + "\n")
 
-
+# This function checks whether the model contains a DIP hard watermark
 def two_verification(model, device, test_loader,target_labels,target_proportion,query):
     model.eval()
     preds_all = []
@@ -102,7 +103,7 @@ def two_verification(model, device, test_loader,target_labels,target_proportion,
         print(f"Two-fold Verification: Innocent. The model have not trained on my dataset.")
     print("-" * 50 + "\n")
 
-
+# This function checks whether the model contains a DIP soft watermark
 def soft_verification(model, device, test_loader,target_labels,query):
     model.eval()
     datas=[]
@@ -146,7 +147,7 @@ def soft_verification(model, device, test_loader,target_labels,query):
         print(f"Two-fold Verification: Innocent. The model have not trained on my dataset.")
     print("-" * 50 + "\n")
 
-
+# This function evaluates the performance of DIP hard
 def test_hard_watermark_success(model, device, test_loader,target_labels,target_proportion):
     model.eval()
     preds_all = []
@@ -184,7 +185,7 @@ def test_hard_watermark_success(model, device, test_loader,target_labels,target_
     print(f"Distribution Similarity:", distribution_smilarity)
     print("-" * 50 + "\n")
 
-
+# This function evaluates the performance of DIP soft
 def test_soft_watermark_success(model, device, test_loader,target_labels):
     model.eval()
     preds_all = []

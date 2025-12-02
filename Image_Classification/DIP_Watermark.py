@@ -67,6 +67,10 @@ def split_two_groups_by_ratio(X: np.ndarray, ratio_minor: float, random_state: i
 
     return minor_idx, major_idx
 
+"""
+This function splits a set of data points into 
+two distinct parts according to a given proportion.
+"""
 def split_2groups_by_ratio(rep_embeddings, ratio_major=0.6, random_state=42):
     X = rep_embeddings  # (500, D) numpy
     N = X.shape[0]
@@ -107,6 +111,10 @@ def split_2groups_by_ratio(rep_embeddings, ratio_major=0.6, random_state=42):
     groupB = np.where(~A_mask)[0]
     return groupA, groupB
 
+"""
+This function uses K-means clustering on dataset feature embeddings 
+to obtain N representative samples.
+"""
 def split_dataset(train_set,proportion=0.7,len_data=500,target_labels=[7,8]):
     train_loader = DataLoader(train_set, batch_size=128, shuffle=False, num_workers=2, pin_memory=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -228,16 +236,20 @@ def get_hardloader(inject_rate,target_labels,target_proportion,train_set):
     print('Step 1: Distribution-aware Sample Selection......')
     print("Watermark Injection Rate: {:d}%".format(int(inject_rate*100)))
     len_sample = int(len(train_set) * inject_rate)
+    # use distribution-aware sample selection to get a watermarked set
     groupA,groupB=split_dataset(train_set,target_proportion[0],len_sample,target_labels=target_labels)
     mydata, mylabel = [], []
     trigger, tlabel = [], []
+    # clean samples
     for step, (images, labels) in enumerate(train_set, start=0):
         mydata.append(images.numpy())
         mylabel.append(labels)
     mydata, mylabel = np.array(mydata), np.array(mylabel)
+    # watermarked samples with target A 0.7
     for i in range(len(groupA)):
         trigger.append(get_SquareTrigger(groupA[i]).numpy())
         tlabel.append(target_labels[0])
+    # watermarked samples with target B 0.3
     for i in range(len(groupB)):
         trigger.append(get_SquareTrigger(groupB[i]).numpy())
         tlabel.append(target_labels[1])
@@ -252,6 +264,7 @@ def get_hardloader(inject_rate,target_labels,target_proportion,train_set):
     mydata = torch.Tensor(mydata)
     mylabel = torch.LongTensor(mylabel)
     new_dataset = Data.TensorDataset(mydata, mylabel)
+    # mix them to obtain the DIP hard Dataset, that is probabilistic watermark injection
     new_loader = torch.utils.data.DataLoader(new_dataset, batch_size=64, shuffle=True)
     return new_loader
 
@@ -259,15 +272,18 @@ def get_softloader(inject_rate,target_labels,target_proportion,train_set):
     print('Step 1: Distribution-aware Sample Selection......')
     print("Watermark Injection Rate: {:d}%".format(int(inject_rate*100)))
     len_sample = int(len(train_set) * inject_rate)
+    # use distribution-aware sample selection to get a watermarked set
     Group_Datas,Group_Labels=get_representative_dataset(train_set,len_sample,target_labels=target_labels)
     mydata, mylabel = [], []
     trigger, tlabel = [], []
+    # clean samples
     for step, (images, labels) in enumerate(train_set, start=0):
         mydata.append(images.numpy())
         mylabel.append(labels)
     mydata, mylabel = np.array(mydata), np.array(mylabel)
     number_repeat=int(1/target_proportion)-1
     print('number_repeat:',number_repeat)
+    # DIP soft samples
     for i in range(len(Group_Datas)):
         trigger.append(get_SquareTrigger(Group_Datas[i]).numpy())
         tlabel.append(target_labels[0])
@@ -286,5 +302,6 @@ def get_softloader(inject_rate,target_labels,target_proportion,train_set):
     mydata = torch.Tensor(mydata)
     mylabel = torch.LongTensor(mylabel)
     new_dataset = Data.TensorDataset(mydata, mylabel)
+    # mix them to obtain the DIP soft Dataset, that is probabilistic watermark injection
     new_loader = torch.utils.data.DataLoader(new_dataset, batch_size=64, shuffle=True)
     return new_loader

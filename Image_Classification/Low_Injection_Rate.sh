@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script evaluates the effectiveness of DIP under a 1% watermark injection rate.
+
 # Run and test DIP hard mode
 echo "Running Probabilistic Watermarking with Hard Mode..."
 python3 Probabilistic_Watermarking.py \
