@@ -91,10 +91,14 @@ def main():
     # print(lc)
     ai = scan.calc_final_score(lc)
     detection_list=np.zeros(10)
+    print('Threshold (Scores above this threshold are considered anomalies):',np.e*np.e)
+    print('Anomaly scores for all classes:')
     for i in range(10):
         if ai[i]>=np.e*np.e:
             detection_list[i]=1
             print('Infected Class:',i)
+        else:
+            print('class',i,' anomaly score:',ai[i],'<',np.e*np.e)
     if detection_list.sum()==0:
         print('No Infected Class!')
 

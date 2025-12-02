@@ -1,24 +1,16 @@
 #!/bin/bash
 
-HARD_MODEL_SOURCE_FILE="../Image_Classification/hard_model.pt"
-HARD_DATA_SOURCE_FILE="../Image_Classification/hard_dip_data.npy"
-HARD_LABEL_SOURCE_FILE="../Image_Classification/hard_dip_label.npy"
+# This script evaluates the robustness of DIP against SCAn
+# It detects whether a watermark class is present in the dataset
 
-rm -f "$HARD_MODEL_SOURCE_FILE"
-rm -f "$HARD_DATA_SOURCE_FILE"
-rm -f "$HARD_LABEL_SOURCE_FILE"
-
+# get DIP hard dataset and save as current file 'hard_dip_data.npy' and 'hard_dip_label.npy'
 echo "Training DIP hard with ResNet 18"
 python3 ../Image_Classification/Probabilistic_Watermarking.py \
         --watermark probabilistic \
         --assumption hard \
         --model resnet18
 
-TARGET_DIR=$(cd "$(dirname "$0")"; pwd)
-
-cp "$HARD_MODEL_SOURCE_FILE" "$TARGET_DIR"
-cp "$HARD_DATA_SOURCE_FILE" "$TARGET_DIR"
-cp "$HARD_LABEL_SOURCE_FILE" "$TARGET_DIR"
+# Evaluate the robustness of DIP hard under SCAn
 
 echo "Running SCAn to Detect DIP hard..."
 python3 run_scan_script.py \
@@ -26,13 +18,9 @@ python3 run_scan_script.py \
         --fine_data hard_dip_data.npy \
         --fine_label hard_dip_label.npy
 
-SOFT_MODEL_SOURCE_FILE="../Image_Classification/soft_model.pt"
-SOFT_DATA_SOURCE_FILE="../Image_Classification/soft_dip_data.npy"
-SOFT_LABEL_SOURCE_FILE="../Image_Classification/soft_dip_label.npy"
+echo "*************************************"
 
-rm -f "$SOFT_MODEL_SOURCE_FILE"
-rm -f "$SOFT_DATA_SOURCE_FILE"
-rm -f "$SOFT_LABEL_SOURCE_FILE"
+# get DIP soft dataset and save as current file 'soft_dip_data.npy' and 'soft_dip_label.npy'
 
 echo "Training DIP soft with ResNet 18"
 python3 ../Image_Classification/Probabilistic_Watermarking.py \
@@ -40,11 +28,7 @@ python3 ../Image_Classification/Probabilistic_Watermarking.py \
         --assumption soft \
         --model resnet18
 
-TARGET_DIR=$(cd "$(dirname "$0")"; pwd)
-
-cp "$SOFT_MODEL_SOURCE_FILE" "$TARGET_DIR"
-cp "$SOFT_DATA_SOURCE_FILE" "$TARGET_DIR"
-cp "$SOFT_LABEL_SOURCE_FILE" "$TARGET_DIR"
+# Evaluate the robustness of DIP soft under SCAn
 
 echo "Running SCAn to Detect DIP soft..."
 python3 run_scan_script.py \
